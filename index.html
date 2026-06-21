@@ -43,17 +43,6 @@
     padding: 14px 16px 18px;
   }
   .widget.compact { --cell-pad: 5px 5px; --font-size: 12.5px; }
-  .toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  .title {
-    font-weight: 600;
-    font-size: 15px;
-    color: var(--text);
-  }
   .gear-btn {
     border: none;
     background: transparent;
@@ -63,6 +52,9 @@
     padding: 4px 6px;
     border-radius: 6px;
     line-height: 1;
+    display: block;
+    margin-top: 8px;
+    margin-left: auto;
   }
   .gear-btn:hover { background: var(--header-bg); color: var(--text); }
 
@@ -121,17 +113,53 @@
   }
   table.cal td.muted-day { color: var(--muted); }
 
-  /* settings panel */
+  /* settings modal */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+    z-index: 100;
+  }
+  .modal-backdrop.open { display: block; }
   .settings-panel {
     display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 101;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--header-bg);
-    padding: 12px 14px;
-    margin-bottom: 12px;
+    padding: 14px 16px;
     font-size: 13px;
+    min-width: 260px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
   }
   .settings-panel.open { display: block; }
+  .settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .settings-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .close-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--muted);
+    padding: 2px 5px;
+    border-radius: 5px;
+    line-height: 1;
+  }
+  .close-btn:hover { background: var(--border); color: var(--text); }
   .settings-row {
     display: flex;
     align-items: center;
@@ -170,13 +198,13 @@
 </style>
 </head>
 <body>
+  <div class="modal-backdrop" id="modalBackdrop"></div>
   <div class="widget" id="widget">
-    <div class="toolbar">
-      <div class="title">Rolling Calendar</div>
-      <button class="gear-btn" id="gearBtn" title="Settings">&#9881;</button>
-    </div>
-
     <div class="settings-panel" id="settingsPanel">
+      <div class="settings-header">
+        <span class="settings-title">Settings</span>
+        <button class="close-btn" id="closeBtn" title="Close">&times;</button>
+      </div>
       <div class="settings-row">
         <label>Language</label>
         <div class="control">
@@ -234,6 +262,7 @@
       <thead><tr id="calHeaderRow"></tr></thead>
       <tbody id="calBody"></tbody>
     </table>
+    <button class="gear-btn" id="gearBtn" title="Settings">&#9881;</button>
   </div>
 
 <script>
@@ -444,8 +473,22 @@
   function wireSettingsUI() {
     var gearBtn = document.getElementById('gearBtn');
     var panel = document.getElementById('settingsPanel');
-    gearBtn.addEventListener('click', function () {
-      panel.classList.toggle('open');
+    var backdrop = document.getElementById('modalBackdrop');
+
+    function openModal() {
+      panel.classList.add('open');
+      backdrop.classList.add('open');
+    }
+    function closeModal() {
+      panel.classList.remove('open');
+      backdrop.classList.remove('open');
+    }
+
+    gearBtn.addEventListener('click', openModal);
+    document.getElementById('closeBtn').addEventListener('click', closeModal);
+    backdrop.addEventListener('click', closeModal);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeModal();
     });
 
     var localeSelect = document.getElementById('localeSelect');
