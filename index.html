@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rolling Calendar Widget</title>
+<style>
+  :root {
+    --accent: #0d9488;
+    --accent-soft: #0d948822;
+    --bg: #ffffff;
+    --text: #1f2328;
+    --muted: #8a8f98;
+    --border: #e7e7e9;
+    --header-bg: #f7f7f8;
+    --today-bg: #0d9488;
+    --today-text: #ffffff;
+    --row-alt: #fafafa;
+    --month-highlight: #f0f0f1;
+    --cell-pad: 11px 4px;
+    --font-size: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  body.dark {
+    --bg: #1f2023;
+    --text: #e9e9ea;
+    --muted: #9a9ca1;
+    --border: #33343a;
+    --header-bg: #2a2b2f;
+    --row-alt: #25262a;
+    --today-text: #1f2023;
+  }
+  .widget {
+    width: fit-content;
+    margin: 0 auto;
+    padding: 14px 16px 18px;
+  }
+  .widget.compact { --cell-pad: 5px 5px; --font-size: 12.5px; }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .title {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+  }
+  .gear-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--muted);
+    padding: 4px 6px;
+    border-radius: 6px;
+    line-height: 1;
+  }
+  .gear-btn:hover { background: var(--header-bg); color: var(--text); }
+
+  table.cal {
+    width: auto;
+    margin: 0 auto;
+    border-collapse: collapse;
+    font-size: var(--font-size);
+    table-layout: fixed;
+  }
+  table.cal th, table.cal td {
+    border: 1px solid var(--border);
+    text-align: center;
+    padding: var(--cell-pad);
+    white-space: nowrap;
+    width: 36px;
+  }
+  table.cal th {
+    background: var(--header-bg);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  table.cal td.month-col, table.cal th.month-col {
+    text-align: left;
+    width: 90px;
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 0.85em;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    border-bottom: none;
+    vertical-align: middle;
+  }
+  table.cal th.month-col {
+    background: transparent;
+  }
+  table.cal td.week-col, table.cal th.week-col {
+    width: 48px;
+    color: var(--muted);
+    font-size: 0.82em;
+  }
+  table.cal td.month-b { background: var(--month-highlight); }
+  table.cal tr.current-week td.month-col,
+  table.cal tr.current-week td.week-col { font-weight: 600; color: var(--accent); }
+  table.cal td.day-cell { font-style: italic; }
+  table.cal td.today {
+    background: var(--today-bg) !important;
+    color: var(--today-text);
+    font-weight: 700;
+    font-style: normal;
+    border-radius: 4px;
+  }
+  table.cal td.muted-day { color: var(--muted); }
+
+  /* settings panel */
+  .settings-panel {
+    display: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--header-bg);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .settings-panel.open { display: block; }
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 0;
+  }
+  .settings-row label { color: var(--muted); }
+  .settings-row .control { display: flex; align-items: center; gap: 8px; }
+  select, input[type="number"] {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 13px;
+  }
+  input[type="number"] { width: 52px; }
+  .toggle {
+    width: 34px; height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle .knob {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: left 0.15s ease;
+  }
+  .toggle.on .knob { left: 16px; }
+</style>
+</head>
+<body>
+  <div class="widget" id="widget">
+    <div class="toolbar">
+      <div class="title">Rolling Calendar</div>
+      <button class="gear-btn" id="gearBtn" title="Settings">&#9881;</button>
+    </div>
+
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-row">
+        <label>Language</label>
+        <div class="control">
+          <select id="localeSelect">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Week starts on</label>
+        <div class="control">
+          <select id="weekStartSelect">
+            <option value="1">Monday</option>
+            <option value="0">Sunday</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Weeks back / forward</label>
+        <div class="control">
+          <input type="number" id="weeksBackInput" min="0" max="26"> /
+          <input type="number" id="weeksForwardInput" min="0" max="26">
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Today highlight</label>
+        <div class="control">
+          <input type="color" id="themeInput">
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Month highlight</label>
+        <div class="control">
+          <input type="color" id="monthHighlightInput">
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Dark mode</label>
+        <div class="control">
+          <div class="toggle" id="darkToggle"><div class="knob"></div></div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Compact rows</label>
+        <div class="control">
+          <div class="toggle" id="compactToggle"><div class="knob"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <table class="cal" id="calTable">
+      <thead><tr id="calHeaderRow"></tr></thead>
+      <tbody id="calBody"></tbody>
+    </table>
+  </div>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'rollingCalendarSettings';
+
+  var LOCALES = {
+    en: {
+      name: 'English',
+      days: ['Su', 'M', 'T', 'W', 'Th', 'F', 'S'],
+      months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+      weekHeader: 'Week', thisWeek: 'This', nextWeek: 'Next', lastWeek: 'Last',
+      weeksAgo: '{n} ago', weeksAhead: '{n}'
+    },
+    es: {
+      name: 'Español',
+      days: ['Do', 'L', 'Ma', 'Mi', 'J', 'V', 'S'],
+      months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+      weekHeader: 'Semana', thisWeek: 'Esta', nextWeek: 'Próxima', lastWeek: 'Pasada',
+      weeksAgo: 'Hace {n}', weeksAhead: '{n}'
+    },
+    fr: {
+      name: 'Français',
+      days: ['Di', 'L', 'Ma', 'Me', 'J', 'V', 'S'],
+      months: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
+      weekHeader: 'Semaine', thisWeek: 'Cette', nextWeek: 'Prochaine', lastWeek: 'Dernière',
+      weeksAgo: 'Il y a {n}', weeksAhead: '{n}'
+    },
+    de: {
+      name: 'Deutsch',
+      days: ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'],
+      months: ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
+      weekHeader: 'Woche', thisWeek: 'Diese', nextWeek: 'Nächste', lastWeek: 'Letzte',
+      weeksAgo: 'Vor {n}', weeksAhead: '{n}'
+    }
+  };
+
+  function tr(pattern, n) {
+    return pattern.replace('{n}', n);
+  }
+
+  var defaults = {
+    weekStart: 1,
+    weeksBack: 4,
+    weeksForward: 8,
+    theme: '#0d9488',
+    monthHighlight: '#f0f0f1',
+    monthHighlightDark: '#2c2d32',
+    locale: 'en',
+    dark: false,
+    compact: false
+  };
+
+  function loadSettings() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return Object.assign({}, defaults);
+      return Object.assign({}, defaults, JSON.parse(raw));
+    } catch (e) { return Object.assign({}, defaults); }
+  }
+  function saveSettings(s) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+  }
+
+  var settings = loadSettings();
+
+  function applyTheme() {
+    document.documentElement.style.setProperty('--accent', settings.theme);
+    document.documentElement.style.setProperty('--accent-soft', settings.theme + '22');
+    document.documentElement.style.setProperty('--today-bg', settings.theme);
+    document.documentElement.style.setProperty('--month-highlight', settings.dark ? settings.monthHighlightDark : settings.monthHighlight);
+    document.body.classList.toggle('dark', !!settings.dark);
+    document.getElementById('widget').classList.toggle('compact', !!settings.compact);
+  }
+
+  function startOfDay(d) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  function addDays(d, n) {
+    var r = new Date(d);
+    r.setDate(r.getDate() + n);
+    return r;
+  }
+
+  function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() &&
+           a.getMonth() === b.getMonth() &&
+           a.getDate() === b.getDate();
+  }
+
+  function buildHeader() {
+    var order = [];
+    for (var i = 0; i < 7; i++) {
+      order.push((settings.weekStart + i) % 7);
+    }
+    var row = document.getElementById('calHeaderRow');
+    row.innerHTML = '';
+    var thMonth = document.createElement('th');
+    thMonth.className = 'month-col';
+    thMonth.textContent = '';
+    row.appendChild(thMonth);
+    var locale = LOCALES[settings.locale] || LOCALES.en;
+    order.forEach(function (dow) {
+      var th = document.createElement('th');
+      th.textContent = locale.days[dow];
+      row.appendChild(th);
+    });
+    var thWeek = document.createElement('th');
+    thWeek.className = 'week-col';
+    thWeek.textContent = locale.weekHeader;
+    row.appendChild(thWeek);
+  }
+
+  function render() {
+    applyTheme();
+    buildHeader();
+
+    var today = startOfDay(new Date());
+    var dow = today.getDay();
+    var offsetToStart = (dow - settings.weekStart + 7) % 7;
+    var currentWeekStart = addDays(today, -offsetToStart);
+
+    var weeksBack = Math.max(0, parseInt(settings.weeksBack, 10) || 0);
+    var weeksForward = Math.max(0, parseInt(settings.weeksForward, 10) || 0);
+
+    var body = document.getElementById('calBody');
+    body.innerHTML = '';
+
+    var monthParityMap = {};
+    var monthCounter = 0;
+
+    function getMonthClass(date) {
+      var key = date.getFullYear() + '-' + date.getMonth();
+      if (!(key in monthParityMap)) {
+        monthParityMap[key] = monthCounter % 2;
+        monthCounter++;
+      }
+      return monthParityMap[key] === 0 ? 'month-a' : 'month-b';
+    }
+
+    // Pre-compute rowspan for each month key
+    var monthSpans = {};
+    for (var j = -weeksBack; j <= weeksForward; j++) {
+      var spanDate = addDays(currentWeekStart, j * 7);
+      var spanKey = spanDate.getFullYear() + '-' + spanDate.getMonth();
+      monthSpans[spanKey] = (monthSpans[spanKey] || 0) + 1;
+    }
+
+    var lastMonthKey = null;
+    var locale = LOCALES[settings.locale] || LOCALES.en;
+
+    for (var i = -weeksBack; i <= weeksForward; i++) {
+      var weekStartDate = addDays(currentWeekStart, i * 7);
+      var monthKey = weekStartDate.getFullYear() + '-' + weekStartDate.getMonth();
+      var isNewMonth = monthKey !== lastMonthKey;
+      if (isNewMonth) lastMonthKey = monthKey;
+
+      var label;
+      if (i < 0) {
+        var n = -i;
+        label = n === 1 ? locale.lastWeek : tr(locale.weeksAgo, n);
+      } else if (i === 0) {
+        label = locale.thisWeek;
+      } else if (i === 1) {
+        label = locale.nextWeek;
+      } else {
+        label = tr(locale.weeksAhead, i);
+      }
+
+      var row = document.createElement('tr');
+      if (i === 0) row.classList.add('current-week');
+
+      if (isNewMonth) {
+        var tdMonth = document.createElement('td');
+        tdMonth.className = 'month-col';
+        tdMonth.textContent = locale.months[weekStartDate.getMonth()];
+        tdMonth.rowSpan = monthSpans[monthKey];
+        row.appendChild(tdMonth);
+      }
+
+      for (var d = 0; d < 7; d++) {
+        var dayDate = addDays(weekStartDate, d);
+        var td = document.createElement('td');
+        td.className = 'day-cell ' + getMonthClass(dayDate);
+        td.textContent = dayDate.getDate();
+        if (sameDay(dayDate, today)) {
+          td.classList.add('today');
+          td.classList.remove('day-cell');
+        }
+        row.appendChild(td);
+      }
+
+      var tdWeek = document.createElement('td');
+      tdWeek.className = 'week-col';
+      tdWeek.textContent = label;
+      row.appendChild(tdWeek);
+
+      body.appendChild(row);
+    }
+
+    var currentWeekRow = body.querySelector('tr.current-week');
+    if (currentWeekRow) {
+      currentWeekRow.scrollIntoView({ block: 'center' });
+    }
+  }
+
+  function wireSettingsUI() {
+    var gearBtn = document.getElementById('gearBtn');
+    var panel = document.getElementById('settingsPanel');
+    gearBtn.addEventListener('click', function () {
+      panel.classList.toggle('open');
+    });
+
+    var localeSelect = document.getElementById('localeSelect');
+    localeSelect.value = settings.locale;
+    localeSelect.addEventListener('change', function () {
+      settings.locale = this.value;
+      saveSettings(settings);
+      render();
+    });
+
+    var weekStartSelect = document.getElementById('weekStartSelect');
+    weekStartSelect.value = String(settings.weekStart);
+    weekStartSelect.addEventListener('change', function () {
+      settings.weekStart = parseInt(this.value, 10);
+      saveSettings(settings);
+      render();
+    });
+
+    var weeksBackInput = document.getElementById('weeksBackInput');
+    weeksBackInput.value = settings.weeksBack;
+    weeksBackInput.addEventListener('change', function () {
+      settings.weeksBack = parseInt(this.value, 10) || 0;
+      saveSettings(settings);
+      render();
+    });
+
+    var weeksForwardInput = document.getElementById('weeksForwardInput');
+    weeksForwardInput.value = settings.weeksForward;
+    weeksForwardInput.addEventListener('change', function () {
+      settings.weeksForward = parseInt(this.value, 10) || 0;
+      saveSettings(settings);
+      render();
+    });
+
+    var darkToggle = document.getElementById('darkToggle');
+    darkToggle.classList.toggle('on', !!settings.dark);
+    darkToggle.addEventListener('click', function () {
+      settings.dark = !settings.dark;
+      darkToggle.classList.toggle('on', settings.dark);
+      monthHighlightInput.value = settings.dark ? settings.monthHighlightDark : settings.monthHighlight;
+      saveSettings(settings);
+      render();
+    });
+
+    var compactToggle = document.getElementById('compactToggle');
+    compactToggle.classList.toggle('on', !!settings.compact);
+    compactToggle.addEventListener('click', function () {
+      settings.compact = !settings.compact;
+      compactToggle.classList.toggle('on', settings.compact);
+      saveSettings(settings);
+      render();
+    });
+
+    var themeInput = document.getElementById('themeInput');
+    themeInput.value = settings.theme;
+    themeInput.addEventListener('input', function () {
+      settings.theme = this.value;
+      saveSettings(settings);
+      applyTheme();
+    });
+
+    var monthHighlightInput = document.getElementById('monthHighlightInput');
+    monthHighlightInput.value = settings.dark ? settings.monthHighlightDark : settings.monthHighlight;
+    monthHighlightInput.addEventListener('input', function () {
+      if (settings.dark) {
+        settings.monthHighlightDark = this.value;
+      } else {
+        settings.monthHighlight = this.value;
+      }
+      saveSettings(settings);
+      applyTheme();
+    });
+  }
+
+  wireSettingsUI();
+  render();
+})();
+</script>
+</body>
+</html>
