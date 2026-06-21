@@ -14,7 +14,7 @@ A lightweight, embeddable calendar widget that shows a rolling window of weeks c
 - **Today highlight** — current day is always visually distinct
 - **Month banding** — alternating background colors make month boundaries easy to scan
 - **Relative week labels** — This, Next, Last, and numbered weeks in the right column
-- **Fully customizable** — accent color, month highlight color (separate light/dark values), week start day, number of weeks shown, compact mode, dark mode
+- **Fully customizable** — colors, week start day, number of weeks, compact mode, dark mode
 - **Multi-language** — English, Español, Français, Deutsch
 - **Persistent settings** — all preferences saved in `localStorage`
 
@@ -22,27 +22,31 @@ A lightweight, embeddable calendar widget that shows a rolling window of weeks c
 
 ## Embed in Notion
 
-1. Host the widget (or use the live demo URL above)
-2. In Notion, type `/embed` and choose **Embed**
-3. Paste the URL and click **Embed link**
+1. In Notion, type `/embed` and choose **Embed**
+2. Paste the URL: `https://amber9904.github.io/calendar-in-notion-widget/`
+3. Click **Embed link**
 
-> **Tip:** If Notion shows a stale version after an update, add `?v=2` (or increment the number) to the URL to force a refresh.
+> **Tip:** If Notion shows a stale version after an update, add `?v=2` (or increment the number) to the embed URL to force a refresh.
 
 ---
 
 ## Settings
 
-Click the **⚙** icon at the bottom of the widget to open settings:
+Click the **⚙** icon at the bottom-right of the widget to open the settings modal.
+
+![Settings modal](screenshot-settings.png)
 
 | Setting | Description |
 |---|---|
-| Language | English, Español, Français, Deutsch |
-| Week starts on | Monday or Sunday |
-| Weeks back / forward | How many weeks to show before and after today |
-| Today highlight | Color used for today's cell and current-week accents |
-| Month highlight | Background color for alternating months (separate light & dark values) |
-| Dark mode | Toggle dark theme |
-| Compact rows | Smaller row height for tighter embeds |
+| **Language** | Display language for month names, day abbreviations, and week labels. Options: English, Español, Français, Deutsch. |
+| **Week starts on** | Choose whether weeks begin on Monday or Sunday. Affects the day column order and which week is highlighted as "current." |
+| **Weeks back / forward** | Controls how many weeks appear above and below today. Default is 4 back and 8 forward. Accepts 0–26. |
+| **Today highlight** | The accent color used for today's cell. Click to open a color picker. |
+| **Month highlight** | The background color applied to alternating months, making month boundaries easy to scan. The widget stores separate values for light and dark mode — switch modes to adjust each independently. |
+| **Dark mode** | Toggles a dark background theme. Switching modes also updates the Month highlight picker to show the dark-mode value. |
+| **Compact rows** | Reduces row height and font size for smaller embeds where vertical space is limited. |
+
+Close the modal by clicking **×**, pressing **Escape**, or clicking anywhere outside it.
 
 ---
 
